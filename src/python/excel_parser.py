@@ -44,40 +44,45 @@ class WorkbookParser:
             logError("load module(%s) failed! error:%s " %
                      (self._module_name, e))
             raise
-        self._workbook_data_root = getattr(
-            self._module, self._excel_file_name + '_Data')()
+        # self._workbook_data_root = getattr(
+        #     self._module, self._excel_file_name + '_Data')()
+        self._workbook_data_root = {}
+        for sheet in self._workbook.sheets():
+            self._workbook_data_root[sheet.name] = getattr(self._module, sheet.name + '_Data')()
         self._parse()
 
-    def _get_data_readable(self):
-        return str(self._workbook_data_root)
+    def _get_data_readable(self,sheetName):
+        return str(self._workbook_data_root[sheetName])
 
-    def _get_data_binaray(self):
-        return self._workbook_data_root.SerializeToString()
+    def _get_data_binaray(self,sheetName):
+        return self._workbook_data_root[sheetName].SerializeToString()
 
     def _parse(self):
         try:
             for sheet in self._workbook.sheets():
                 # sheet_item_class = getattr(self._module, sheet.name)()
                 # item_obj = sheet_item_class()
-                SheetParser(self._workbook_data_root, sheet).parse()
+                SheetParser(self._workbook_data_root[sheet.name], sheet).parse()
         except Exception as e:
             logError("open sheet file(%s) failed! errror:%s" %
                      (self._excel_file_path, e))
             raise
 
     def serialize(self, temp_proto_data_path, data_out):
-        data = self._get_data_binaray()
-        pb_file = data_out if data_out is not None else temp_proto_data_path
-        file_path = pb_file + "/" + self._output_file_name
-        file = open(file_path, 'wb+')
-        file.write(data)
-        file.close()
-        log("exported protobuff data to :%s" % file_path)
-        # data = self._get_data_readable()
-        # file_name = temp_proto_data_path + "/" + self._excel_file_name + ".txt"
-        # file = open(file_name, 'w+')
-        # file.write(data)
-        # file.close()
+        for sheet in self._workbook.sheets():
+            data = self._get_data_binaray(sheet.name)
+            pb_file = data_out if data_out is not None else temp_proto_data_path
+            # file_path = pb_file + "/" + self._output_file_name
+            file_path = pb_file + "/" + sheet.name + ".bin"
+            file = open(file_path, 'wb+')
+            file.write(data)
+            file.close()
+            log("exported protobuff data to :%s" % file_path)
+            # data = self._get_data_readable(sheet.name)
+            # file_name = temp_proto_data_path + "/" + self._excel_file_name + ".txt"
+            # file = open(file_name, 'w+')
+            # file.write(data)
+            # file.close()
 
 
 DATA_ROW_START = 4
@@ -91,7 +96,9 @@ FIELD_COMMENT_ROW = 3
 class SheetParser:
     def __init__(self, data_root, sheet):
         self._sheet = sheet
-        self._item_map = getattr(data_root, self._sheet.name+"_items")
+        # self._item_map = getattr(data_root, self._sheet.name+"_items")
+        self._item_map = {}
+        self._item_list = getattr(data_root, "items")
         self._row_count = len(self._sheet.col_values(0))
         self._col_count = len(self._sheet.row_values(0))
 
@@ -110,9 +117,10 @@ class SheetParser:
                     self._sheet.name, item_id)
                 logError(error)
                 raise RuntimeError(error)
-            item = self._item_map.get_or_create(item_id)
+            #self._item_map.get_or_create(item_id)
+            item = self._item_list.add()
             self._parse_row(item, cur_row)
-            # self._item_map[item_id] = item
+            self._item_map[item_id] = item
             # item = self._item_map.add()
             # item_id = self._parse_row(item, cur_row)
         # print(str(self._item_map))

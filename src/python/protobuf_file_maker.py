@@ -82,14 +82,14 @@ class ProtobufFile:
             self._output.append("   map<uint32,  %s> %s_items = %d;\n" % (
                 sheet_name, sheet_name, index))
         self._output.append("\n}\n")
-    """"
+    
     def layout_array(self, sheet_name):
         # 输出数组定义
         self._output.append("message " + sheet_name + "_Data {\n")
         self._output.append("    repeated " + sheet_name + " items = 1;\n}\n")
         # self._output.append("message " + sheet_name + "_Data {\n")
         # self._output.append("    map<uint32, " + sheet_name + "> items = 1;\n}\n")
-    """
+    
 
     def write2file(self, write_path):
         # 输出到文件
